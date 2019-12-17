@@ -6,6 +6,7 @@ import firrtl.Mappers._
 import firrtl.PrimOps.{Bits, Not}
 import firrtl.Utils.{isBitExtract, isTemp}
 import firrtl.WrappedExpression._
+import firrtl.options.{Dependency, PreservesAll}
 
 import scala.collection.mutable
 
@@ -81,9 +82,18 @@ object InlineNotsTransform {
 }
 
 /** Inline nodes that are simple nots */
-class InlineNotsTransform extends Transform {
+class InlineNotsTransform extends Transform with PreservesAll[Transform] {
   def inputForm = UnknownForm
   def outputForm = UnknownForm
+
+  override val prerequisites = firrtl.stage.Forms.LowFormMinimumOptimized ++
+    Seq( Dependency[BlackBoxSourceHelper],
+         Dependency[FixAddingNegativeLiterals],
+         Dependency[ReplaceTruncatingArithmetic] )
+
+  override val optionalPrerequisites = firrtl.stage.Forms.LowFormOptimized
+
+  override val dependents = Seq.empty
 
   def execute(state: CircuitState): CircuitState = {
     val modulesx = state.circuit.modules.map(InlineNotsTransform.onMod(_))
